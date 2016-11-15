@@ -1,0 +1,2 @@
+include ':app', ':waveformDisplay'
+project(':waveformDisplay').projectDir = new File('waveform')

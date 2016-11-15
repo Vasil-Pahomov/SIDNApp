@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">SIDN App</string>
+    <string name="buttonRecStartText">Start</string>
+    <string name="buttonRecStopText">Stop</string>
+</resources>
