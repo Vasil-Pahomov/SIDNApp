@@ -22,13 +22,16 @@
         android:id="@+id/buttonRec"
         android:onClick="buttonRecClick" />
 
-    <com.newventuresoftware.waveform.WaveformView android:layout_height="match_parent" android:layout_width="match_parent"
+    <com.newventuresoftware.waveform.WaveformView
+        android:layout_height="match_parent"
+        android:layout_width="match_parent"
         android:id="@+id/waveView"
-        app:mode="PLAYBACK"
+        app:mode="RECORDING"
         app:waveformStrokeThickness="3"
-        app:waveformColor="#e5dc33"
-        app:waveformFillColor="#e93519"
-        android:background="#000000" />
+        app:waveformColor="#000000"
+        app:waveformFillColor="#000000"
+        app:historySize="0"
+        android:background="#ffffff" />
 
 
 </LinearLayout>

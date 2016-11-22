@@ -25,8 +25,6 @@ public class WaveformView extends View {
     public static final int MODE_RECORDING = 1;
     public static final int MODE_PLAYBACK = 2;
 
-    private static final int HISTORY_SIZE = 6;
-
     private TextPaint mTextPaint;
     private Paint mStrokePaint, mFillPaint, mMarkerPaint;
 
@@ -36,12 +34,12 @@ public class WaveformView extends View {
 
     private int width, height;
     private float xStep, centerY;
-    private int mMode, mAudioLength, mMarkerPosition, mSampleRate, mChannels;
+    private int mMode, mAudioLength, mMarkerPosition, mSampleRate, mChannels, mHistorySize;
     private short[] mSamples;
     private LinkedList<float[]> mHistoricalData;
     private Picture mCachedWaveform;
     private Bitmap mCachedWaveformBitmap;
-    private int colorDelta = 255 / (HISTORY_SIZE + 1);
+    private int colorDelta;
 
     public WaveformView(Context context) {
         super(context);
@@ -74,6 +72,9 @@ public class WaveformView extends View {
                 ContextCompat.getColor(context, R.color.default_playback_indicator));
         int mTextColor = a.getColor(R.styleable.WaveformView_timecodeColor,
                 ContextCompat.getColor(context, R.color.default_timecode));
+
+        mHistorySize = a.getInteger(R.styleable.WaveformView_historySize, 6);
+        colorDelta = 255 / (mHistorySize + 1);
 
         a.recycle();
 
@@ -201,21 +202,27 @@ public class WaveformView extends View {
 
     private void onSamplesChanged() {
         if (mMode == MODE_RECORDING) {
-            if (mHistoricalData == null)
-                mHistoricalData = new LinkedList<>();
-            LinkedList<float[]> temp = new LinkedList<>(mHistoricalData);
+                if (mHistoricalData == null)
+                    mHistoricalData = new LinkedList<>();
+                LinkedList<float[]> temp = new LinkedList<>(mHistoricalData);
+            if (mHistorySize > 0) {
+                // For efficiency, we are reusing the array of points.
+                float[] waveformPoints;
+                if (temp.size() == mHistorySize) {
+                    waveformPoints = temp.removeFirst();
+                } else {
+                    waveformPoints = new float[width * 4];
+                }
 
-            // For efficiency, we are reusing the array of points.
-            float[] waveformPoints;
-            if (temp.size() == HISTORY_SIZE) {
-                waveformPoints = temp.removeFirst();
+                drawRecordingWaveform(mSamples, waveformPoints);
+                temp.addLast(waveformPoints);
+                mHistoricalData = temp;
             } else {
-                waveformPoints = new float[width * 4];
+                if (mHistoricalData.size() == 0) {
+                    mHistoricalData.add(new float[width * 4]);
+                }
+                drawRecordingWaveform(mSamples, mHistoricalData.getFirst());
             }
-
-            drawRecordingWaveform(mSamples, waveformPoints);
-            temp.addLast(waveformPoints);
-            mHistoricalData = temp;
             postInvalidate();
         } else if (mMode == MODE_PLAYBACK) {
             mMarkerPosition = -1;

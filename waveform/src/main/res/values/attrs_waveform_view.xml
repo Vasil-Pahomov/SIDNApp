@@ -9,5 +9,6 @@
         <attr name="waveformFillColor" format="color" />
         <attr name="playbackIndicatorColor" format="color" />
         <attr name="timecodeColor" format="color" />
+        <attr name="historySize" format="integer" />
     </declare-styleable>
 </resources>
