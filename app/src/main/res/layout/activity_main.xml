@@ -13,25 +13,41 @@
     android:orientation="vertical">
 
     <Button
-        android:text="Start"
+        android:text="@string/start"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
         android:id="@+id/buttonRec"
         android:onClick="buttonRecClick" />
+
+    <TextView
+        android:text=""
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/textViewStatus" />
 
     <com.newventuresoftware.waveform.WaveformView
         android:layout_height="match_parent"
         android:layout_width="match_parent"
-        android:id="@+id/waveView"
+        android:id="@+id/waveViewSource"
         app:mode="RECORDING"
+        android:layout_weight="0.5"
         app:waveformStrokeThickness="3"
         app:waveformColor="#000000"
         app:waveformFillColor="#000000"
         app:historySize="0"
         android:background="#ffffff" />
 
+
+    <com.newventuresoftware.waveform.WaveformView
+        android:layout_height="match_parent"
+        android:layout_width="match_parent"
+        android:id="@+id/waveView1"
+        app:mode="RECORDING"
+        android:layout_weight="0.5"
+        app:waveformStrokeThickness="3"
+        app:waveformColor="#000000"
+        app:waveformFillColor="#000000"
+        app:historySize="0"
+        android:background="#ffffff" />
 
 </LinearLayout>
