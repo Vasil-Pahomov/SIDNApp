@@ -1,6 +1,7 @@
 package lvr.sidnapp;
 
 import android.content.res.Resources;
+import android.renderscript.RenderScript;
 
 import org.apache.commons.io.IOUtils;
 
@@ -37,5 +38,6 @@ public class Utils {
         sb.get(samples);
         return samples;
     }
+
 
 }

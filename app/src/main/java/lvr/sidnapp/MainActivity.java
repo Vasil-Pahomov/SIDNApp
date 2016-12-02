@@ -30,6 +30,7 @@ import java.util.Arrays;
 public class MainActivity extends AppCompatActivity implements AudioDataReceivedListener {
 
     short[] samples1;
+    short[] samples2;
 
     short[] recBuf;
 
@@ -51,8 +52,9 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
         setContentView(R.layout.activity_main);
 
         samples1 = Utils.ReadSamples(getResources(), R.raw.s1);
+        samples2 = Utils.ReadSamples(getResources(), R.raw.s2);
 
-        recBuf = new short[50000];
+        recBuf = new short[100000];
 
         buttonRec = (Button) findViewById(R.id.buttonRec);
         waveViewSource = (WaveformView) findViewById(R.id.waveViewSource);
@@ -60,6 +62,8 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
         textViewStatus = (TextView) findViewById(R.id.textViewStatus);
 
         setStatusText("Idle");
+
+        RSUtils.Init(this);
 
     }
 
@@ -76,7 +80,6 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
         if (recBufPtr >= (recBuf.length-1)) {
             recBufPtr = 0;
             stopAudioRecording();
-            Log.d("SIDN", "Starting async task");
             waveViewSource.setSamples(recBuf);
 
             new AsyncTask<Void, Void, Void>() {
@@ -85,56 +88,23 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
                 @Override
                 protected Void doInBackground(Void... params) {
 
-                    Log.d("SIDN", "Starting convolution");
                     setStatusText("Convolving");
 
-                    filtered = convolve(recBuf, samples1);
+                    filtered = RSUtils.RsConvolve(recBuf, samples1);
 
-                    Log.d("SIDN", "Convolution done");
                     return null;
                 }
 
                 @Override
                 protected void onPostExecute(Void aVoid) {
-                    Log.d("SIDN", "Setting samples");
                     waveView1.setSamples(filtered);
-                    startAudioRecordingSafe();
+                    setStatusText("Idle");
                 }
             }.execute();
-            Log.d("SIDN", "Async task started");
         }
     }
 
-    private short[] convolve(short[] data, short[] kernel) {
-        short[] res = new short[data.length];
-        float[] resf = new float[data.length];
 
-        float max = Float.MIN_VALUE;
-
-
-        //this is VERY slow, try FFT convolution there
-        for ( int i = 0; i < data.length; i++ ) {
-            float sum = 0;
-            for (int j = 0; j < kernel.length; j++) {
-                if (i >= j) {
-                    sum += data[i-j] * kernel[j];
-                }
-            }
-            if (sum > max) {
-                max = sum;
-            }
-            if (sum < -max) {
-                max = -sum;
-            }
-            resf[i] = sum;
-        }
-
-        for (int i=0; i < res.length; i++) {
-            res[i] = (short) Math.round(resf[i] / max * 32767);
-        }
-
-        return res;
-    }
 
     public void buttonRecClick(View view) {
         if (recThread.recording()) {
@@ -191,7 +161,7 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
-        if (requestCode == REQUEST_RECORD_AUDIO && grantResults.length > 0 &&
+            if (requestCode == REQUEST_RECORD_AUDIO && grantResults.length > 0 &&
                 grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             recThread.stopRecording();
         }
