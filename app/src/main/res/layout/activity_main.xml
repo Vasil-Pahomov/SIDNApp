@@ -30,12 +30,13 @@
         android:layout_width="match_parent"
         android:id="@+id/waveViewSource"
         app:mode="RECORDING"
-        android:layout_weight="0.5"
+        android:layout_weight="0.3"
         app:waveformStrokeThickness="3"
         app:waveformColor="#000000"
         app:waveformFillColor="#000000"
         app:historySize="0"
-        android:background="#ffffff" />
+        android:background="#ffffff"
+        android:onClick="testcomp_click"/>
 
 
     <com.newventuresoftware.waveform.WaveformView
@@ -43,7 +44,19 @@
         android:layout_width="match_parent"
         android:id="@+id/waveView1"
         app:mode="RECORDING"
-        android:layout_weight="0.5"
+        android:layout_weight="0.3"
+        app:waveformStrokeThickness="3"
+        app:waveformColor="#000000"
+        app:waveformFillColor="#000000"
+        app:historySize="0"
+        android:background="#ffffff" />
+
+    <com.newventuresoftware.waveform.WaveformView
+        android:layout_height="match_parent"
+        android:layout_width="match_parent"
+        android:id="@+id/waveView2"
+        app:mode="RECORDING"
+        android:layout_weight="0.3"
         app:waveformStrokeThickness="3"
         app:waveformColor="#000000"
         app:waveformFillColor="#000000"

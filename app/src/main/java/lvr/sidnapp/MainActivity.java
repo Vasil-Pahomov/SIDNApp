@@ -29,10 +29,8 @@ import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity implements AudioDataReceivedListener {
 
-    short[] samples1;
-    short[] samples2;
-
-    short[] recBuf;
+    short[] samples1, samples2, recBuf;
+    double[] recBuf_d, result_d;
 
     int recBufPtr = 0;
 
@@ -40,9 +38,11 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
 
     Button buttonRec;
 
-    WaveformView waveViewSource, waveView1;
+    WaveformView waveViewSource, waveView1, waveView2;
 
     TextView textViewStatus;
+
+    Convolution conv1;
 
     private static final int REQUEST_RECORD_AUDIO = 13;
 
@@ -54,16 +54,28 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
         samples1 = Utils.ReadSamples(getResources(), R.raw.s1);
         samples2 = Utils.ReadSamples(getResources(), R.raw.s2);
 
-        recBuf = new short[100000];
+
+        recBuf = new short[50000];
+
+        double[] s1d = new double[samples1.length];
+        for (int i=0;i<samples1.length;i++) {
+            s1d[i] = samples1[i];
+        }
+
+        conv1 = new Convolution(s1d, recBuf.length);
+
+        recBuf_d = new double[recBuf.length];
+        result_d = new double[conv1.getFrameSize()];
 
         buttonRec = (Button) findViewById(R.id.buttonRec);
         waveViewSource = (WaveformView) findViewById(R.id.waveViewSource);
         waveView1 = (WaveformView) findViewById(R.id.waveView1);
+        waveView2 = (WaveformView) findViewById(R.id.waveView2);
         textViewStatus = (TextView) findViewById(R.id.textViewStatus);
 
         setStatusText("Idle");
 
-        RSUtils.Init(this);
+
 
     }
 
@@ -90,7 +102,26 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
 
                     setStatusText("Convolving");
 
-                    filtered = RSUtils.RsConvolve(recBuf, samples1);
+                    //filtered = RSUtils.RsConvolve(recBuf, samples1, samples2);
+
+                    for (int i=0;i<recBuf.length;i++) {
+                        recBuf_d[i] = recBuf[i];
+                    }
+
+                    conv1.computeConvResult(recBuf_d, result_d);
+
+                    double max = Double.MIN_VALUE;
+                    for (int i=1; i<result_d.length;i++) {
+                        if (Math.abs(result_d[i]) > max) {
+                            max = Math.abs(result_d[i]);
+                        }
+                    }
+
+
+                    filtered = new short[result_d.length];
+                    for (int i=1; i<result_d.length;i++) {
+                        filtered[i] =  (short)Math.round(result_d[i] * 32676 / max);
+                    }
 
                     return null;
                 }
@@ -98,7 +129,7 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
                 @Override
                 protected void onPostExecute(Void aVoid) {
                     waveView1.setSamples(filtered);
-                    setStatusText("Idle");
+                    startAudioRecordingSafe();//setStatusText("Idle");
                 }
             }.execute();
         }
@@ -174,5 +205,32 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
                 textViewStatus.setText(text);
             }
         });
+    }
+
+    public void testcomp_click(View view) {
+        for (int i=0;i<samples1.length;i++) {
+            recBuf_d[i] = samples1[samples1.length-i-1];
+        }
+
+        conv1.computeConvResult(recBuf_d, result_d);
+
+        double max = Double.MIN_VALUE;
+        for (int i=1; i<result_d.length;i++) {
+            if (Math.abs(result_d[i]) > max) {
+                max = Math.abs(result_d[i]);
+            }
+        }
+
+
+        short[] filtered = new short[result_d.length];
+        for (int i=1; i<result_d.length;i++) {
+            filtered[i] =  (short)Math.round(result_d[i] * 32676 / max);
+        }
+
+
+
+        waveViewSource.setChannels(1);
+        waveViewSource.setSampleRate(RecordingThread.SAMPLE_RATE);
+        waveViewSource.setSamples(filtered);
     }
 }
