@@ -124,11 +124,14 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
                     conv1.computeConvResult(recBuf_d, result1_d);
                     conv2.computeConvResult(recBuf_d, result2_d);
 
-                    double max1 = Double.MIN_VALUE, max2=Double.MAX_VALUE;
+                    double max1 = Double.MIN_VALUE, max2=Double.MIN_VALUE;
                     for (int i=1; i<result1_d.length;i++) {
                         if (Math.abs(result1_d[i]) > max1) {
                             max1 = Math.abs(result1_d[i]);
                         }
+                    }
+
+                    for (int i=1; i<result2_d.length;i++) {
                         if (Math.abs(result2_d[i]) > max2) {
                             max2 = Math.abs(result2_d[i]);
                         }
@@ -138,6 +141,8 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
                     filtered2 = new short[result2_d.length];
                     for (int i=1; i<result1_d.length;i++) {
                         filtered1[i] =  (short)Math.round(Math.abs(result1_d[i]) * 32767 / max1);
+                    }
+                    for (int i=1; i<result2_d.length;i++) {
                         filtered2[i] =  (short)Math.round(Math.abs(result2_d[i]) * 32767 / max2);
                     }
 
@@ -148,36 +153,15 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
                 protected void onPostExecute(Void aVoid) {
                     waveView1.setSamples(filtered1);
                     waveView2.setSamples(filtered2);
-                    try {
-                        FileOutputStream os = new FileOutputStream(new File(getStorageDir(), "data.csv"));
-                        os.write(Arrays.toString(recBuf).replace('[',' ').replace(']',' ').getBytes());
-                        os.write("\r\n".getBytes());
-                        os.write(Arrays.toString(filtered1).replace('[',' ').replace(']',' ').getBytes());
-                        os.write("\r\n".getBytes());
-                        os.write(Arrays.toString(filtered2).replace('[',' ').replace(']',' ').getBytes());
-                        os.close();
-                    }
-                    catch (Exception ex) {
-                        Log.e("SIDN", "Error writing file!", ex);
-                    }
 
-                    //startAudioRecordingSafe();
-                    setStatusText("Idle");
+                    startAudioRecordingSafe();
+                    //setStatusText("Idle");
                 }
             }.execute();
         }
     }
 
 
-    public File getStorageDir() {
-        // Get the directory for the user's public pictures directory.
-        File file = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOWNLOADS), "SIDN");
-        if (!file.mkdirs()) {
-            Log.e("SIDN", "Directory not created");
-        }
-        return file;
-    }
 
 
     public void buttonRecClick(View view) {
