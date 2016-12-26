@@ -4,6 +4,7 @@ import android.app.Dialog;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.os.AsyncTask;
+import android.os.Environment;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
@@ -20,8 +21,12 @@ import com.newventuresoftware.waveform.WaveformView;
 
 import org.apache.commons.io.IOUtils;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
@@ -30,7 +35,7 @@ import java.util.Arrays;
 public class MainActivity extends AppCompatActivity implements AudioDataReceivedListener {
 
     short[] samples1, samples2, recBuf;
-    double[] recBuf_d, result_d;
+    double[] recBuf_d, result1_d, result2_d;
 
     int recBufPtr = 0;
 
@@ -42,7 +47,7 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
 
     TextView textViewStatus;
 
-    Convolution conv1;
+    Convolution conv1, conv2;
 
     private static final int REQUEST_RECORD_AUDIO = 13;
 
@@ -55,7 +60,7 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
         samples2 = Utils.ReadSamples(getResources(), R.raw.s2);
 
 
-        recBuf = new short[50000];
+        recBuf = new short[samples1.length * 3];
 
         double[] s1d = new double[samples1.length];
         for (int i=0;i<samples1.length;i++) {
@@ -64,8 +69,16 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
 
         conv1 = new Convolution(s1d, recBuf.length);
 
+        double[] s2d = new double[samples2.length];
+        for (int i=0;i<samples2.length;i++) {
+            s2d[i] = samples2[i];
+        }
+
+        conv2 = new Convolution(s2d, recBuf.length);
+
         recBuf_d = new double[recBuf.length];
-        result_d = new double[conv1.getFrameSize()];
+        result1_d = new double[conv1.getFrameSize()];
+        result2_d = new double[conv2.getFrameSize()];
 
         buttonRec = (Button) findViewById(R.id.buttonRec);
         waveViewSource = (WaveformView) findViewById(R.id.waveViewSource);
@@ -95,7 +108,7 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
             waveViewSource.setSamples(recBuf);
 
             new AsyncTask<Void, Void, Void>() {
-                private short[] filtered;
+                private short[] filtered1, filtered2;
 
                 @Override
                 protected Void doInBackground(Void... params) {
@@ -108,19 +121,24 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
                         recBuf_d[i] = recBuf[i];
                     }
 
-                    conv1.computeConvResult(recBuf_d, result_d);
+                    conv1.computeConvResult(recBuf_d, result1_d);
+                    conv2.computeConvResult(recBuf_d, result2_d);
 
-                    double max = Double.MIN_VALUE;
-                    for (int i=1; i<result_d.length;i++) {
-                        if (Math.abs(result_d[i]) > max) {
-                            max = Math.abs(result_d[i]);
+                    double max1 = Double.MIN_VALUE, max2=Double.MAX_VALUE;
+                    for (int i=1; i<result1_d.length;i++) {
+                        if (Math.abs(result1_d[i]) > max1) {
+                            max1 = Math.abs(result1_d[i]);
+                        }
+                        if (Math.abs(result2_d[i]) > max2) {
+                            max2 = Math.abs(result2_d[i]);
                         }
                     }
 
-
-                    filtered = new short[result_d.length];
-                    for (int i=1; i<result_d.length;i++) {
-                        filtered[i] =  (short)Math.round(result_d[i] * 32676 / max);
+                    filtered1 = new short[result1_d.length];
+                    filtered2 = new short[result2_d.length];
+                    for (int i=1; i<result1_d.length;i++) {
+                        filtered1[i] =  (short)Math.round(Math.abs(result1_d[i]) * 32767 / max1);
+                        filtered2[i] =  (short)Math.round(Math.abs(result2_d[i]) * 32767 / max2);
                     }
 
                     return null;
@@ -128,13 +146,38 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
 
                 @Override
                 protected void onPostExecute(Void aVoid) {
-                    waveView1.setSamples(filtered);
-                    startAudioRecordingSafe();//setStatusText("Idle");
+                    waveView1.setSamples(filtered1);
+                    waveView2.setSamples(filtered2);
+                    try {
+                        FileOutputStream os = new FileOutputStream(new File(getStorageDir(), "data.csv"));
+                        os.write(Arrays.toString(recBuf).replace('[',' ').replace(']',' ').getBytes());
+                        os.write("\r\n".getBytes());
+                        os.write(Arrays.toString(filtered1).replace('[',' ').replace(']',' ').getBytes());
+                        os.write("\r\n".getBytes());
+                        os.write(Arrays.toString(filtered2).replace('[',' ').replace(']',' ').getBytes());
+                        os.close();
+                    }
+                    catch (Exception ex) {
+                        Log.e("SIDN", "Error writing file!", ex);
+                    }
+
+                    //startAudioRecordingSafe();
+                    setStatusText("Idle");
                 }
             }.execute();
         }
     }
 
+
+    public File getStorageDir() {
+        // Get the directory for the user's public pictures directory.
+        File file = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS), "SIDN");
+        if (!file.mkdirs()) {
+            Log.e("SIDN", "Directory not created");
+        }
+        return file;
+    }
 
 
     public void buttonRecClick(View view) {
@@ -212,19 +255,19 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
             recBuf_d[i] = samples1[samples1.length-i-1];
         }
 
-        conv1.computeConvResult(recBuf_d, result_d);
+        conv1.computeConvResult(recBuf_d, result1_d);
 
         double max = Double.MIN_VALUE;
-        for (int i=1; i<result_d.length;i++) {
-            if (Math.abs(result_d[i]) > max) {
-                max = Math.abs(result_d[i]);
+        for (int i=1; i<result1_d.length;i++) {
+            if (Math.abs(result1_d[i]) > max) {
+                max = Math.abs(result1_d[i]);
             }
         }
 
 
-        short[] filtered = new short[result_d.length];
-        for (int i=1; i<result_d.length;i++) {
-            filtered[i] =  (short)Math.round(result_d[i] * 32676 / max);
+        short[] filtered = new short[result1_d.length];
+        for (int i=1; i<result1_d.length;i++) {
+            filtered[i] =  (short)Math.abs(Math.round(result1_d[i] * 32676 / max));
         }
 
 
