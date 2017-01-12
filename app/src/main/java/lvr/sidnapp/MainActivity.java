@@ -2,6 +2,7 @@ package lvr.sidnapp;
 
 import android.app.Dialog;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.os.AsyncTask;
 import android.os.Environment;
@@ -45,7 +46,7 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
 
     WaveformView waveViewSource, waveView1, waveView2;
 
-    TextView textViewStatus;
+    TextView textViewStatus, textViewPos;
 
     Convolution conv1, conv2;
 
@@ -60,7 +61,7 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
         samples2 = Utils.ReadSamples(getResources(), R.raw.s2);
 
 
-        recBuf = new short[samples1.length * 3];
+        recBuf = new short[samples1.length * 2];
 
         double[] s1d = new double[samples1.length];
         for (int i=0;i<samples1.length;i++) {
@@ -85,10 +86,9 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
         waveView1 = (WaveformView) findViewById(R.id.waveView1);
         waveView2 = (WaveformView) findViewById(R.id.waveView2);
         textViewStatus = (TextView) findViewById(R.id.textViewStatus);
+        textViewPos = (TextView) findViewById(R.id.textViewPos);
 
         setStatusText("Idle");
-
-
 
     }
 
@@ -124,25 +124,61 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
                     conv1.computeConvResult(recBuf_d, result1_d);
                     conv2.computeConvResult(recBuf_d, result2_d);
 
-                    double max1 = Double.MIN_VALUE, max2=Double.MIN_VALUE;
-                    for (int i=1; i<result1_d.length;i++) {
-                        if (Math.abs(result1_d[i]) > max1) {
-                            max1 = Math.abs(result1_d[i]);
+                    double max1 = Double.MIN_VALUE, max2=Double.MIN_VALUE,
+                            peak1 = Double.MIN_VALUE, peak2 = Double.MIN_VALUE,
+                            sqsum1 = 0, sqsum2 = 0;
+                    int peakSearchWindowSize = Math.max(samples1.length, samples2.length);
+                    int peak1pos = -1, peak2pos = -1;
+                    //todo: избавится от двойных циклов - приводить samples к единой длине, заполняя нулями
+
+                    for (int i=0; i<result1_d.length;i++) {
+                        double res = Math.abs(result1_d[i]);
+                        if ( res > max1) {
+                            max1 = res;
                         }
+                        if (i < peakSearchWindowSize) {
+                            if (res > peak1) {
+                                peak1 = res;
+                                peak1pos = i;
+                            }
+                        }
+                        sqsum1 += res*res;
                     }
 
-                    for (int i=1; i<result2_d.length;i++) {
-                        if (Math.abs(result2_d[i]) > max2) {
-                            max2 = Math.abs(result2_d[i]);
+                    for (int i=0; i<result2_d.length;i++) {
+                        double res = Math.abs(result2_d[i]);
+                        if ( res > max2) {
+                            max2 = res;
                         }
+                        if (i < peakSearchWindowSize) {
+                            if (res > peak2) {
+                                peak2 = res;
+                                peak2pos = i;
+                            }
+                        }
+                        sqsum2 += res*res;
                     }
+
+                    int pos =
+                            (peak2pos >= peak1pos)
+                            ? peak2pos - peak1pos
+                            : peak2pos - peak1pos + peakSearchWindowSize;
+
+                    final String posstr = String.format("%d (%d-%d), PF: %f-%f", pos, peak1pos, peak2pos, peak1/Math.sqrt(sqsum1/samples1.length), peak2/Math.sqrt(sqsum2/samples2.length));
+                    Log.d("SIDN", posstr);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            textViewPos.setText(posstr);
+                        }
+                    });
 
                     filtered1 = new short[result1_d.length];
                     filtered2 = new short[result2_d.length];
-                    for (int i=1; i<result1_d.length;i++) {
+                    for (int i=0; i<result1_d.length;i++) {
                         filtered1[i] =  (short)Math.round(Math.abs(result1_d[i]) * 32767 / max1);
                     }
-                    for (int i=1; i<result2_d.length;i++) {
+                    for (int i=0; i<result2_d.length;i++) {
                         filtered2[i] =  (short)Math.round(Math.abs(result2_d[i]) * 32767 / max2);
                     }
 
@@ -154,6 +190,7 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
                     waveView1.setSamples(filtered1);
                     waveView2.setSamples(filtered2);
 
+
                     startAudioRecordingSafe();
                     //setStatusText("Idle");
                 }
@@ -161,8 +198,11 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
         }
     }
 
-
-
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        stopAudioRecording();
+    }
 
     public void buttonRecClick(View view) {
         if (recThread.recording()) {

@@ -25,6 +25,12 @@
         android:layout_height="wrap_content"
         android:id="@+id/textViewStatus" />
 
+    <TextView
+        android:text=""
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/textViewPos" />
+
     <com.newventuresoftware.waveform.WaveformView
         android:layout_height="match_parent"
         android:layout_width="match_parent"
@@ -47,7 +53,7 @@
         android:layout_weight="0.3"
         app:waveformStrokeThickness="3"
         app:waveformColor="#000000"
-        app:waveformFillColor="#000000"
+        app:waveformFillColor="#808080"
         app:historySize="0"
         android:background="#ffffff" />
 
@@ -59,7 +65,7 @@
         android:layout_weight="0.3"
         app:waveformStrokeThickness="3"
         app:waveformColor="#000000"
-        app:waveformFillColor="#000000"
+        app:waveformFillColor="#808080"
         app:historySize="0"
         android:background="#ffffff" />
 
