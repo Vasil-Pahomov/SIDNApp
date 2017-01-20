@@ -64,17 +64,13 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
         recBuf = new short[samples1.length * 2];
 
         double[] s1d = new double[samples1.length];
+        double[] s2d = new double[samples2.length];
         for (int i=0;i<samples1.length;i++) {
             s1d[i] = samples1[i];
-        }
-
-        conv1 = new Convolution(s1d, recBuf.length);
-
-        double[] s2d = new double[samples2.length];
-        for (int i=0;i<samples2.length;i++) {
             s2d[i] = samples2[i];
         }
 
+        conv1 = new Convolution(s1d, recBuf.length);
         conv2 = new Convolution(s2d, recBuf.length);
 
         recBuf_d = new double[recBuf.length];
@@ -115,8 +111,6 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
 
                     setStatusText("Convolving");
 
-                    //filtered = RSUtils.RsConvolve(recBuf, samples1, samples2);
-
                     for (int i=0;i<recBuf.length;i++) {
                         recBuf_d[i] = recBuf[i];
                     }
@@ -129,34 +123,31 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
                             sqsum1 = 0, sqsum2 = 0;
                     int peakSearchWindowSize = Math.max(samples1.length, samples2.length);
                     int peak1pos = -1, peak2pos = -1;
-                    //todo: избавится от двойных циклов - приводить samples к единой длине, заполняя нулями
 
                     for (int i=0; i<result1_d.length;i++) {
-                        double res = Math.abs(result1_d[i]);
-                        if ( res > max1) {
-                            max1 = res;
+                        double res1 = Math.abs(result1_d[i]);
+                        if ( res1 > max1) {
+                            max1 = res1;
                         }
                         if (i < peakSearchWindowSize) {
-                            if (res > peak1) {
-                                peak1 = res;
+                            if (res1 > peak1) {
+                                peak1 = res1;
                                 peak1pos = i;
                             }
                         }
-                        sqsum1 += res*res;
-                    }
+                        sqsum1 += res1*res1;
 
-                    for (int i=0; i<result2_d.length;i++) {
-                        double res = Math.abs(result2_d[i]);
-                        if ( res > max2) {
-                            max2 = res;
+                        double res2 = Math.abs(result2_d[i]);
+                        if ( res2 > max2) {
+                            max2 = res2;
                         }
                         if (i < peakSearchWindowSize) {
-                            if (res > peak2) {
-                                peak2 = res;
+                            if (res2 > peak2) {
+                                peak2 = res2;
                                 peak2pos = i;
                             }
                         }
-                        sqsum2 += res*res;
+                        sqsum2 += res2*res2;
                     }
 
                     int pos =
@@ -177,8 +168,6 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
                     filtered2 = new short[result2_d.length];
                     for (int i=0; i<result1_d.length;i++) {
                         filtered1[i] =  (short)Math.round(Math.abs(result1_d[i]) * 32767 / max1);
-                    }
-                    for (int i=0; i<result2_d.length;i++) {
                         filtered2[i] =  (short)Math.round(Math.abs(result2_d[i]) * 32767 / max2);
                     }
 
@@ -190,7 +179,19 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
                     waveView1.setSamples(filtered1);
                     waveView2.setSamples(filtered2);
 
-
+/*                    try {
+                        FileOutputStream os = new FileOutputStream(new File(getStorageDir(), "data.csv"));
+                        os.write(Arrays.toString(recBuf).replace('[',' ').replace(']',' ').getBytes());
+                        os.write("\r\n".getBytes());
+                        os.write(Arrays.toString(filtered1).replace('[',' ').replace(']',' ').getBytes());
+                        os.write("\r\n".getBytes());
+                        os.write(Arrays.toString(filtered2).replace('[',' ').replace(']',' ').getBytes());
+                        os.close();
+                    }
+                    catch (Exception ex) {
+                        Log.e("SIDN", "Error writing file!", ex);
+                    }
+*/
                     startAudioRecordingSafe();
                     //setStatusText("Idle");
                 }
@@ -272,6 +273,15 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
                 textViewStatus.setText(text);
             }
         });
+    }
+
+    public File getStorageDir() {
+        File file = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS), "SIDN");
+        if (!file.mkdirs()) {
+            Log.e("SIDN", "Directory not created");
+        }
+        return file;
     }
 
     public void testcomp_click(View view) {
