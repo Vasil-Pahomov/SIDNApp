@@ -32,11 +32,18 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 import java.util.Arrays;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements AudioDataReceivedListener {
 
-    short[] samples1, samples2, recBuf;
-    double[] recBuf_d, result1_d, result2_d;
+    /* number of signals */
+    private static final int NSIG = 4;
+
+    short[][] samples = new short[NSIG][];
+    double[][] result_d = new double[NSIG][];
+
+    short[] recBuf;
+    double[] recBuf_d;
 
     int recBufPtr = 0;
 
@@ -48,34 +55,45 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
 
     TextView textViewStatus, textViewPos;
 
-    Convolution conv1, conv2;
+    Convolution[] conv = new Convolution[NSIG];
 
     private static final int REQUEST_RECORD_AUDIO = 13;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        samples1 = Utils.ReadSamples(getResources(), R.raw.s1);
-        samples2 = Utils.ReadSamples(getResources(), R.raw.s2);
+        samples = new short[NSIG][];
 
+        double[] sd = null;
 
-        recBuf = new short[samples1.length * 2];
+        int recBufLength = 0;
 
-        double[] s1d = new double[samples1.length];
-        double[] s2d = new double[samples2.length];
-        for (int i=0;i<samples1.length;i++) {
-            s1d[i] = samples1[i];
-            s2d[i] = samples2[i];
+        for (int i=0;i<NSIG;i++) {
+            Resources res = getResources();
+            String rname = String.format(Locale.ROOT, "s%d", i+1);
+            int rid = res.getIdentifier(rname, "raw", getPackageName());
+            samples[i] = Utils.ReadSamples(getResources(), rid);
+            if (i>0 && samples[i].length != samples[0].length) {
+                Log.e("SIDN", String.format("Sample length mismatch: %d/%d", samples[i].length, samples[0].length));
+            }
+
+            if (sd == null) {
+                sd = new double[samples[i].length];
+                recBufLength = samples[i].length*2;
+            }
+            for (int j=0;j<sd.length;j++) {
+                sd[j] = samples[i][j];
+            }
+
+            conv[i] = new Convolution(sd, recBufLength);
+            result_d[i]= new double[conv[i].getFrameSize()];
         }
 
-        conv1 = new Convolution(s1d, recBuf.length);
-        conv2 = new Convolution(s2d, recBuf.length);
-
+        recBuf = new short[recBufLength];
         recBuf_d = new double[recBuf.length];
-        result1_d = new double[conv1.getFrameSize()];
-        result2_d = new double[conv2.getFrameSize()];
 
         buttonRec = (Button) findViewById(R.id.buttonRec);
         waveViewSource = (WaveformView) findViewById(R.id.waveViewSource);
@@ -104,7 +122,12 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
             waveViewSource.setSamples(recBuf);
 
             new AsyncTask<Void, Void, Void>() {
-                private short[] filtered1, filtered2;
+                private int[] peakPos = new int[NSIG];
+                private double[] peakRate = new double[NSIG];
+
+                private short[][] filtered = new short[NSIG][];
+
+                private int peakSearchWindowSize;
 
                 @Override
                 protected Void doInBackground(Void... params) {
@@ -115,69 +138,58 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
                         recBuf_d[i] = recBuf[i];
                     }
 
-                    conv1.computeConvResult(recBuf_d, result1_d);
-                    conv2.computeConvResult(recBuf_d, result2_d);
 
-                    double max1 = Double.MIN_VALUE, max2=Double.MIN_VALUE,
-                            peak1 = Double.MIN_VALUE, peak2 = Double.MIN_VALUE,
-                            sqsum1 = 0, sqsum2 = 0;
-                    int peakSearchWindowSize = Math.max(samples1.length, samples2.length);
-                    int peak1pos = -1, peak2pos = -1;
+                    for (int i=0;i<NSIG;i++) {
+                        conv[i].computeConvResult(recBuf_d, result_d[i]);
 
-                    for (int i=0; i<result1_d.length;i++) {
-                        double res1 = Math.abs(result1_d[i]);
-                        if ( res1 > max1) {
-                            max1 = res1;
-                        }
-                        if (i < peakSearchWindowSize) {
-                            if (res1 > peak1) {
-                                peak1 = res1;
-                                peak1pos = i;
+                        double max = Double.MIN_VALUE, peak = Double.MIN_VALUE, sqsum = 0;
+                        peakSearchWindowSize = samples[i].length;
+                        int peakpos = -1;
+
+                        for (int j = 0; j < result_d[i].length; j++) {
+                            double res = Math.abs(result_d[i][j]);
+                            if (res > max) {
+                                max = res;
+                            }
+                            if (i < peakSearchWindowSize) {
+                                if (res > peak) {
+                                    peak = res;
+                                    peakpos = j;
+                                }
+                                sqsum += res * res;
                             }
                         }
-                        sqsum1 += res1*res1;
 
-                        double res2 = Math.abs(result2_d[i]);
-                        if ( res2 > max2) {
-                            max2 = res2;
+                        peakPos[i] = peakpos;
+                        peakRate[i] = peak / Math.sqrt(sqsum / peakSearchWindowSize);
+
+                        filtered[i] = new short[result_d[i].length];
+                        for (int j=0; j<filtered[i].length;j++) {
+                            filtered[i][j] = (short) Math.round(Math.abs(result_d[i][j]) * 32767 / max);
                         }
-                        if (i < peakSearchWindowSize) {
-                            if (res2 > peak2) {
-                                peak2 = res2;
-                                peak2pos = i;
-                            }
-                        }
-                        sqsum2 += res2*res2;
                     }
 
-                    int pos =
-                            (peak2pos >= peak1pos)
-                            ? peak2pos - peak1pos
-                            : peak2pos - peak1pos + peakSearchWindowSize;
-
-                    final String posstr = String.format("%d (%d-%d), PF: %f-%f", pos, peak1pos, peak2pos, peak1/Math.sqrt(sqsum1/samples1.length), peak2/Math.sqrt(sqsum2/samples2.length));
-                    Log.d("SIDN", posstr);
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            textViewPos.setText(posstr);
-                        }
-                    });
-
-                    filtered1 = new short[result1_d.length];
-                    filtered2 = new short[result2_d.length];
-                    for (int i=0; i<result1_d.length;i++) {
-                        filtered1[i] =  (short)Math.round(Math.abs(result1_d[i]) * 32767 / max1);
-                        filtered2[i] =  (short)Math.round(Math.abs(result2_d[i]) * 32767 / max2);
-                    }
 
                     return null;
                 }
 
                 @Override
                 protected void onPostExecute(Void aVoid) {
-                    waveView1.setSamples(filtered1);
-                    waveView2.setSamples(filtered2);
+                    waveView1.setSamples(filtered[0]);
+                    waveView2.setSamples(filtered[1]);
+                    int pos =
+                            (peakPos[1] >= peakPos[0])
+                                    ? peakPos[1] - peakPos[0]
+                                    : peakPos[1] - peakPos[0] + peakSearchWindowSize;
+
+                    final String posstr = String.format("%d (%d-%d), PF: %f-%f", pos, peakPos[0], peakPos[1], peakRate[0], peakRate[1]);
+                    new Handler().post(new Runnable() {
+                        @Override
+                        public void run() {
+                            textViewPos.setText(posstr);
+                        }
+                    });
+                    Log.d("SIDN", posstr);
 
 /*                    try {
                         FileOutputStream os = new FileOutputStream(new File(getStorageDir(), "data.csv"));
@@ -285,6 +297,7 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
     }
 
     public void testcomp_click(View view) {
+        /*
         for (int i=0;i<samples1.length;i++) {
             recBuf_d[i] = samples1[samples1.length-i-1];
         }
@@ -308,6 +321,6 @@ public class MainActivity extends AppCompatActivity implements AudioDataReceived
 
         waveViewSource.setChannels(1);
         waveViewSource.setSampleRate(RecordingThread.SAMPLE_RATE);
-        waveViewSource.setSamples(filtered);
+        waveViewSource.setSamples(filtered);*/
     }
 }
