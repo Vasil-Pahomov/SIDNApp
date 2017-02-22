@@ -22,7 +22,7 @@ import java.util.Locale;
 
 public class BaseLocationActivity extends AppCompatActivity implements AudioDataReceivedListener {
     /* number of signals */
-    private static final int NSIG = 4;
+    protected static final int NSIG = 4;
 
     short[][] samples = new short[NSIG][];
     double[][] result_d = new double[NSIG][];
