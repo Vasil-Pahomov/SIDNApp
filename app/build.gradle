@@ -30,6 +30,6 @@ dependencies {
     compile 'commons-io:commons-io:+'
     compile 'com.android.support:design:24.1.1'
     compile project(':waveformDisplay')
-
     compile 'com.github.wendykierp:JTransforms:3.0'
+    compile files('libs/Jama-1.0.3.jar')
 }
