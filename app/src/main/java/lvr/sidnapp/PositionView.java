@@ -20,8 +20,10 @@ public class PositionView extends View {
             roomWidth,
             roomHeight,
             posX, posY,
-            radiusTL, radiusTR, radiusBL, radiusBR,
             scale;
+
+    Position[] beaconPositions;
+    double[] radiuses;
 
     private Paint roomBackgroundPaint, roomBorderPaint, beaconPaint, posPaint, circlePaint;
 
@@ -50,18 +52,16 @@ public class PositionView extends View {
     }
 
 
-    public void setRoom(double width, double height) {
+    public void setRoom(double width, double height, Position[] beaconPositions) {
         roomWidth = width;
         roomHeight = height;
+        this.beaconPositions = beaconPositions;
     }
 
-    public void setPos(double x, double y, double radTL, double radTR, double radBL, double radBR) {
+    public void setPos(double x, double y, double[] radiuses) {
         posX = x;
         posY = y;
-        radiusTL = radTL;
-        radiusTR = radTR;
-        radiusBL = radBL;
-        radiusBR = radBR;
+        this.radiuses = radiuses;
         invalidate();
     }
 
@@ -70,18 +70,15 @@ public class PositionView extends View {
         super.onDraw(canvas);
         canvas.drawRect(0,0,getWidth(), getHeight(), this.roomBackgroundPaint);
         float beaconRadius = getWidth() / 20;
-        canvas.drawCircle(getX(0), getY(0), beaconRadius, this.beaconPaint);
-        canvas.drawCircle(getX(roomWidth), getY(0), beaconRadius, this.beaconPaint);
-        canvas.drawCircle(getX(0), getY(roomHeight), beaconRadius, this.beaconPaint);
-        canvas.drawCircle(getX(roomWidth), getY(roomHeight), beaconRadius, this.beaconPaint);
         //todo: border
         canvas.drawCircle(getX(posX), getY(posY), getWidth() / 20, this.posPaint);
 
-        canvas.drawCircle(getX(0),getY(0), (float) (radiusTL * scale), this.circlePaint);
-        canvas.drawCircle(getX(roomWidth),getY(0), (float) (radiusTR * scale), this.circlePaint);
-        canvas.drawCircle(getX(0),getY(roomHeight), (float) (radiusBR * scale), this.circlePaint);
-        canvas.drawCircle(getX(roomWidth),getY(roomHeight), (float) (radiusBL * scale), this.circlePaint);
-
+        if (radiuses != null && beaconPositions != null) {
+            for (int i = 0; i < radiuses.length; i++) {
+                canvas.drawCircle(getX(beaconPositions[i].getX()), getY(beaconPositions[i].getY()), beaconRadius, this.beaconPaint);
+                canvas.drawCircle(getX(beaconPositions[i].getX()), getY(beaconPositions[i].getY()), (float) (radiuses[i] * scale), this.circlePaint);
+            }
+        }
     }
 
     private float getX(double x) {

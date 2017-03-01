@@ -24,12 +24,13 @@ public class TriangActivity extends BaseLocationActivity {
         setContentView(R.layout.activity_triang);
 
         posView = (PositionView)findViewById(R.id.posView);
-        posView.setRoom(roomWidth, roomHeight);
 
         beaconPositions[0] = new Position(0, 0, 1);
         beaconPositions[1] = new Position(roomWidth, 0 ,1);
         beaconPositions[2] = new Position(roomWidth, roomHeight, 1);
         beaconPositions[3] = new Position(0, roomHeight, 1);
+
+        posView.setRoom(roomWidth, roomHeight, beaconPositions);
 
         /*BeaconData[] data = new BeaconData[4];
         data[0] = new BeaconData(0, (int) Math.round(1.1021 / SOUND_VELOCITY * RecordingThread.SAMPLE_RATE), 0);
@@ -72,7 +73,7 @@ public class TriangActivity extends BaseLocationActivity {
             // тут надо хитро обсчитать
         }
 
-        posView.setPos(0,0, radiuses[0], radiuses[1], 0, 0);
+        //posView.setPos(0,0, radiuses[0], radiuses[1], 0, 0);
 
         startLocationUpdate();
     }
@@ -143,12 +144,12 @@ public class TriangActivity extends BaseLocationActivity {
         double x = 2.43, y = 2.51, z = 1.0;
         BeaconData[] data = new BeaconData[NSIG];
         double rad[] = new double[NSIG];
-        double corr = Math.random() / 10;
+        double corr = (Math.random() -0.5);
         for (int i=0; i<NSIG; i++) {
             rad[i] = Math.sqrt(
                     (beaconPositions[i].getX() - x) * (beaconPositions[i].getX() - x)
                             + (beaconPositions[i].getY() - y) * (beaconPositions[i].getY() - y)
-                            + (beaconPositions[i].getZ() - z) * (beaconPositions[i].getZ() - z)) + corr;
+                            + (beaconPositions[i].getZ() - z) * (beaconPositions[i].getZ() - z)) + corr + (Math.random() - 0.5) / 10;
 
             data[i] = new BeaconData(i, (int)
                     Math.round(rad[i] / SOUND_VELOCITY * RecordingThread.SAMPLE_RATE), 0);
@@ -157,9 +158,9 @@ public class TriangActivity extends BaseLocationActivity {
         Position pos = trilaterate(data, beaconPositions);
 
         if (pos == null) {
-            posView.setPos(0,0,rad[0], rad[1], rad[2], rad[3]);
+            posView.setPos(0,0,rad);
         } else {
-            posView.setPos(pos.getX(), pos.getY(), rad[0], rad[1], rad[2], rad[3]);
+            posView.setPos(pos.getX(), pos.getY(), rad);
         }
     }
 }
