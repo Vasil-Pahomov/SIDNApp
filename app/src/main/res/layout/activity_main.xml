@@ -12,13 +12,6 @@
     tools:context="lvr.sidnapp.MainActivity"
     android:orientation="vertical">
 
-    <Button
-        android:text="@string/start"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/buttonRec"
-        android:onClick="buttonRecClick" />
-
     <TextView
         android:text=""
         android:layout_width="match_parent"
@@ -45,6 +38,12 @@
         android:onClick="testcomp_click"/>
 
 
+    <TextView
+        android:text=""
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/textViewPos1" />
+
     <com.newventuresoftware.waveform.WaveformView
         android:layout_height="match_parent"
         android:layout_width="match_parent"
@@ -57,10 +56,52 @@
         app:historySize="0"
         android:background="#ffffff" />
 
+    <TextView
+        android:text=""
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/textViewPos2" />
+
     <com.newventuresoftware.waveform.WaveformView
         android:layout_height="match_parent"
         android:layout_width="match_parent"
         android:id="@+id/waveView2"
+        app:mode="RECORDING"
+        android:layout_weight="0.3"
+        app:waveformStrokeThickness="3"
+        app:waveformColor="#000000"
+        app:waveformFillColor="#808080"
+        app:historySize="0"
+        android:background="#ffffff" />
+
+    <TextView
+        android:text=""
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/textViewPos3" />
+
+    <com.newventuresoftware.waveform.WaveformView
+        android:layout_height="match_parent"
+        android:layout_width="match_parent"
+        android:id="@+id/waveView3"
+        app:mode="RECORDING"
+        android:layout_weight="0.3"
+        app:waveformStrokeThickness="3"
+        app:waveformColor="#000000"
+        app:waveformFillColor="#808080"
+        app:historySize="0"
+        android:background="#ffffff" />
+
+    <TextView
+        android:text=""
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/textViewPos4" />
+
+    <com.newventuresoftware.waveform.WaveformView
+        android:layout_height="match_parent"
+        android:layout_width="match_parent"
+        android:id="@+id/waveView4"
         app:mode="RECORDING"
         android:layout_weight="0.3"
         app:waveformStrokeThickness="3"

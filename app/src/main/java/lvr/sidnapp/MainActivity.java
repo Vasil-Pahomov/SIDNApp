@@ -10,27 +10,42 @@ import android.widget.TextView;
 
 import com.newventuresoftware.waveform.WaveformView;
 
+import org.w3c.dom.Text;
+
 import java.io.File;
 
 public class MainActivity extends BaseLocationActivity {
 
     Button buttonRec;
 
-    WaveformView waveViewSource, waveView1, waveView2;
+    WaveformView waveViewSource, waveView1, waveView2, waveView3, waveView4;
 
-    TextView textViewStatus, textViewPos;
+    TextView textViewStatus, textViewPos, textViewPos1, textViewPos2, textViewPos3, textViewPos4;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        buttonRec = (Button) findViewById(R.id.buttonRec);
         waveViewSource = (WaveformView) findViewById(R.id.waveViewSource);
         waveView1 = (WaveformView) findViewById(R.id.waveView1);
         waveView2 = (WaveformView) findViewById(R.id.waveView2);
+        waveView3 = (WaveformView) findViewById(R.id.waveView3);
+        waveView4 = (WaveformView) findViewById(R.id.waveView4);
+
+        textViewPos1 = (TextView) findViewById(R.id.textViewPos1);
+        textViewPos2 = (TextView) findViewById(R.id.textViewPos2);
+        textViewPos3 = (TextView) findViewById(R.id.textViewPos3);
+        textViewPos4 = (TextView) findViewById(R.id.textViewPos4);
+
         textViewStatus = (TextView) findViewById(R.id.textViewStatus);
         textViewPos = (TextView) findViewById(R.id.textViewPos);
 
-        setStatusText("Idle");
+        startLocationUpdate();
+        setStatusText("Recording");
+
+        waveViewSource.setChannels(1);
+        waveViewSource.setSampleRate(RecordingThread.SAMPLE_RATE);
+        waveView1.setChannels(1);
+        waveView1.setSampleRate(RecordingThread.SAMPLE_RATE);
     }
 
     private void setStatusText(final String text) {
@@ -42,46 +57,32 @@ public class MainActivity extends BaseLocationActivity {
         });
     }
 
-    public void buttonRecClick(View view) {
-        if (recThread.recording()) {
-            stopLocationUpdate();
-            setStatusText("Stopped");
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    buttonRec.setText(R.string.buttonRecStartText);
-                }
-            });
-        } else {
-            startLocationUpdate();
-            setStatusText("Recording");
-            buttonRec.setText(R.string.buttonRecStopText);
-
-            waveViewSource.setChannels(1);
-            waveViewSource.setSampleRate(RecordingThread.SAMPLE_RATE);
-            waveView1.setChannels(1);
-            waveView1.setSampleRate(RecordingThread.SAMPLE_RATE);
-        }
-    }
-
     @Override
     protected void onLocationUpdate(short[] rawData, short[][] convData, BeaconData[] data) {
         super.onLocationUpdate(rawData, convData, data);
         waveViewSource.setSamples(rawData);
         waveView1.setSamples(convData[0]);
         waveView2.setSamples(convData[1]);
+        waveView3.setSamples(convData[2]);
+        waveView4.setSamples(convData[3]);
         int pos =
                 (data[1].getPeakPosition() >= data[0].getPeakPosition())
                         ? data[1].getPeakPosition() - data[0].getPeakPosition()
                         : data[1].getPeakPosition() - data[0].getPeakPosition() + convData[0].length;
 
         final String posstr = String.format("%d (%d-%d), PF: %f-%f", pos, data[0].getPeakPosition(),  data[1].getPeakPosition(), data[0].getPeakFactor(), data[1].getPeakFactor());
+        final BeaconData[] tdata = data;
         new Handler().post(new Runnable() {
             @Override
             public void run() {
                 textViewPos.setText(posstr);
+                textViewPos1.setText(String.format("%f",tdata[0].getPeakFactor()));
+                textViewPos2.setText(String.format("%f",tdata[1].getPeakFactor()));
+                textViewPos3.setText(String.format("%f",tdata[2].getPeakFactor()));
+                textViewPos4.setText(String.format("%f",tdata[3].getPeakFactor()));
             }
         });
+
         Log.d("SIDN", posstr);
 
 /*                    try {

@@ -1,0 +1,14 @@
+clc;
+clear;
+T=1;
+fs=48000;
+t=0:1/fs:8*T;
+f1=500;
+f2=500;
+f3=500;
+f4=500;
+c1=sin(2*pi*f1*t).*(t<T);
+c2=sin(2*pi*f2*t).*(t>T*2).*(t<T*3);
+c3=sin(2*pi*f3*t).*(t>T*4).*(t<T*5);
+c4=sin(2*pi*f4*t).*(t>T*6).*(t<T*7);
+audiowrite('testbeacons.wav',[c1;c2;c3;c4]', fs);
